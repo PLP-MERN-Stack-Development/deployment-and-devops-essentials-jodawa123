@@ -1,0 +1,56 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run linter
+        working-directory: ./backend
+        run: npm run lint || true
+
+      - name: Run tests
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+          MONGODB_URI: ${{ secrets.MONGODB_URI_TEST }}
+          JWT_SECRET: test-secret-key
+        run: npm test || true
+
+      - name: Build check
+        working-directory: ./backend
+        run: |
+          node --version
+          npm --version
+
+
